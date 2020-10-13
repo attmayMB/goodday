@@ -1,4 +1,3 @@
-
 <!---
 What are you? Some kind of hacker? Stop looking at the source and go support Msushi. 
 - attmayMB 
@@ -6,23 +5,14 @@ What are you? Some kind of hacker? Stop looking at the source and go support Msu
 Changelog:
 1.0.0.0.0 Original release
 1.0.0.0.1 Dark mode enabled
-1.0.0.0.2 3D!! (by nedboulter)
+1.0.0.0.2 3D!!!! (by nedboulter)
 1.0.0.0.3 Stars!!! (maybe I should stop? - nedboulter)
-1.0.0.0.4 Portals!!!! (ok this is the last thing - nedboulter)
-1.0.0.0.5 Embed (added by frood04)
-1.0.0.0.6 Link to ismsushipartnered.com (added by nedboulter)
-
-GIF to ruin illusion: https://gyazo.com/842c0745f430adfddc63fc773f00aaa5
-m
 --->
 <!DOCTYPE html>
 <html>
     <head>
         <title>Is today a good day to be an Msushi fan?</title>
 	    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
-		<meta property="og:title" content="Is it a good day to be an Msushi fan?">
-		<meta property="og:url" content="https://isitagooddaytobeanmsushifan.com/">
-		<meta property="og:description" content="Yes.">
     </head>
     <body>
         <style>
@@ -30,52 +20,24 @@ m
                 margin: 0px;
                 overflow: hidden;
             }
-
-            a {
-                font-family: inherit;
-                color: inherit;
-                text-decoration: inherit;
-            }
-
-            #partner {
-                z-index: 1;
-                color: #B200FF;
-                background-color: transparent;
-                font-family:Arial, Helvetica, sans-serif;
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 20px;
-                text-align: right;
-            }
         </style>
         <div id="answer"></div>
         <canvas></canvas>
         <script>
-            // GL stuff
             var canvas, gl;
             var shaderProgram;
+            var uniloc_projection, uniloc_model;
 
-            // Uniform variables
-            var uniloc_projection, uniloc_model,
-                uniloc_color, uniloc_hackdepth;
+            var textGeometryCount;
 
-            // Constants
+            // Also defines 'star box'
             var MAX_DIST = 200;
             var STAR_COUNT = 5000;
-            var PORTAL_INSIDE_OFFSET = 0.001;
-            var DIST_BETWEEN_PORTALS = 0.5;
-
-            // Models
-            var mdl_quadOffset, mdl_quadCount;
-            var mdl_textOffset, mdl_textCount;
-            var mdl_starOffset, mdl_starCount;
-            var mdl_portalOffset, mdl_portalCount;
 
             function main()
             {
                 canvas = document.getElementsByTagName("canvas")[0];
-                gl = canvas.getContext("webgl", {stencil: true});
+                gl = canvas.getContext("webgl");
                 if (gl === null)
                 {
                     console.log("No WebGL");
@@ -108,147 +70,45 @@ m
                 (function loopCallback()
                 {
                     var time = performance.now() - startTime;
-                    time /= 5000;
+                    time /= 1000;
 
                     gl.frontFace(gl.CCW);
                     gl.cullFace(gl.BACK);
                     gl.enable(gl.CULL_FACE);
-                    gl.enable(gl.STENCIL_TEST);
-
-                    gl.clearColor(0, 0, 0, 1);
-                    gl.clearStencil(0);
-                    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
-
-                    gl.stencilFunc(gl.ALWAYS, 1, 0xFF);
-                    gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
 
                     gl.enable(gl.DEPTH_TEST);
-                    drawPortalOutsides();
-                    
-                    // Stencil Portal insides. Also use them to clear depth
-                    // making it look like a 'ring' instead of solid.
-                    gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE); // Replace will change to '1'
-                    setColor(0.6980392157 * 0.5, 0, 0.5); // Change to 0, 0, 0 to get rid of portal purpleness
-                    gl.depthFunc(gl.GREATER);
-                    gl.uniform1f(uniloc_hackdepth, 1);
-                    drawPortalInsides();
-                    gl.uniform1f(uniloc_hackdepth, 0);
-                    gl.depthFunc(gl.LESS);
 
-                    // Stencil are between portals
-                    gl.depthMask(false);
-                    gl.colorMask(false, false, false, false);
+                    gl.clearColor(0, 0, 0, 1);
+                    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+                    // Text
                     gl.uniformMatrix4fv(uniloc_model, false, new Float32Array([
-                        1, 0, 0, 0,
-                        0, DIST_BETWEEN_PORTALS, 0, 0,
-                        0, 0, 1, -1,
+                        Math.cos(time), 0, -Math.sin(time), 0,
+                        0, 1, 0, 0,
+                        Math.sin(time), 0, Math.cos(time), -1,
                         0, 0, 0, 1
                     ]));
-                    gl.drawArrays(gl.TRIANGLES, mdl_quadOffset, mdl_quadCount);
-                    gl.depthMask(true);
-                    gl.colorMask(true, true, true, true);
+                    gl.drawArrays(gl.TRIANGLES, 0, textGeometryCount);
 
-                    // No more changes to stencil
-                    gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
-
-                    setColor(0.6980392157, 0, 1); // MSUSHI purple
-                    drawStars(time);
+                    // STARS
+                    gl.uniformMatrix4fv(uniloc_model, false, new Float32Array([
+                        1, 0, 0, 0,
+                        0, 1, 0, 0,
+                        0, 0, 1, floatMod(time * 50, MAX_DIST * 2),
+                        0, 0, 0, 1
+                    ]));
+                    gl.drawArrays(gl.POINTS, textGeometryCount, STAR_COUNT);
                     
-                    gl.stencilFunc(gl.EQUAL, 1, 0xFF); // only render in stenciled areas
-
-                    var textY = -floatMod(time, .5/*Chaging this value will probably break everything lol*/);
-
-                    setColor(0.6980392157, 0, 1); // MSUSHI purple
-                    drawText(0, textY, -1);
-
-                    drawText(0, textY + DIST_BETWEEN_PORTALS, -1);
+                    gl.uniformMatrix4fv(uniloc_model, false, new Float32Array([
+                        1, 0, 0, 0,
+                        0, 1, 0, 0,
+                        0, 0, 1, floatMod(time * 50, MAX_DIST * 2) - MAX_DIST * 2,
+                        0, 0, 0, 1
+                    ]));
+                    gl.drawArrays(gl.POINTS, textGeometryCount, STAR_COUNT);
 
                     requestAnimationFrame(loopCallback);
                 })();
-            }
-
-            // handles color
-            function drawPortalOutsides()
-            {
-                var bright = 5;
-
-                // Bottom Portal
-                setColor(0.35 * bright, 0.5 * bright, bright); // Portal Blue
-                gl.uniformMatrix4fv(uniloc_model, false, new Float32Array([
-                    1, 0, 0, 0,
-                    0, 1, 0, -DIST_BETWEEN_PORTALS / 2.0,
-                    0, 0, 1, -1,
-                    0, 0, 0, 1
-                ]));
-                gl.drawArrays(gl.TRIANGLE_FAN, mdl_portalOffset, mdl_portalCount);
-
-                // Top Portal
-                setColor(0.75 * bright, 0.5 * bright, 0.15 * bright); // Portal Orange
-                gl.uniformMatrix4fv(uniloc_model, false, new Float32Array([
-                    1, 0, 0, 0,
-                    0, -1, 0, DIST_BETWEEN_PORTALS / 2.0,
-                    0, 0, -1, -1,
-                    0, 0, 0, 1
-                ]));
-                gl.drawArrays(gl.TRIANGLE_FAN, mdl_portalOffset, mdl_portalCount);
-            }
-
-            // doesn't handle color
-            function drawPortalInsides()
-            {
-                // Bottom
-                gl.uniformMatrix4fv(uniloc_model, false, new Float32Array([
-                    0.75, 0, 0, 0,
-                    0, 1, 0, (-DIST_BETWEEN_PORTALS / 2.0) + PORTAL_INSIDE_OFFSET,
-                    0, 0, 0.75, -1,
-                    0, 0, 0, 1
-                ]));
-                gl.drawArrays(gl.TRIANGLE_FAN, mdl_portalOffset, mdl_portalCount);
-
-                // Top
-                gl.uniformMatrix4fv(uniloc_model, false, new Float32Array([
-                    0.75, 0, 0, 0,
-                    0, -1, 0, (DIST_BETWEEN_PORTALS / 2.0) - PORTAL_INSIDE_OFFSET,
-                    0, 0, -0.75, -1,
-                    0, 0, 0, 1
-                ]));
-                gl.drawArrays(gl.TRIANGLE_FAN, mdl_portalOffset, mdl_portalCount);
-            }
-
-            function drawText(xPos, yPos, zPos)
-            {
-                // Text
-                gl.uniformMatrix4fv(uniloc_model, false, new Float32Array([
-                    1, 0, 0, xPos,
-                    0, 1, 0, yPos,
-                    0, 0, 1, zPos,
-                    0, 0, 0, 1
-                ]));
-                gl.drawArrays(gl.TRIANGLES, mdl_textOffset, mdl_textCount);
-            }
-
-            function drawStars(time)
-            {
-                 gl.uniformMatrix4fv(uniloc_model, false, new Float32Array([
-                    1, 0, 0, 0,
-                    0, 1, 0, 0,
-                    0, 0, 1, floatMod(time * 50, MAX_DIST * 2),
-                    0, 0, 0, 1
-                ]));
-                gl.drawArrays(gl.POINTS, mdl_starOffset, mdl_starCount);
-                
-                gl.uniformMatrix4fv(uniloc_model, false, new Float32Array([
-                    1, 0, 0, 0,
-                    0, 1, 0, 0,
-                    0, 0, 1, floatMod(time * 50, MAX_DIST * 2) - MAX_DIST * 2,
-                    0, 0, 0, 1
-                ]));
-                gl.drawArrays(gl.POINTS, mdl_starOffset, mdl_starCount);
-            }
-
-            function setColor(r, g, b)
-            {
-                gl.uniform3f(uniloc_color, r, g, b);
             }
 
             function doshaders()
@@ -258,8 +118,6 @@ m
                 gl.shaderSource(vert, "\
                 uniform mat4 projection;\
                 uniform mat4 model;\
-                uniform float hackdepth;\
-                \
                 attribute vec3 pos;\
                 attribute vec3 normal;\
                 \
@@ -272,28 +130,23 @@ m
                     v_pos = worldPos.xyz;\
                     v_norm = normal * mat3(model);\
                     gl_Position = worldPos * projection;\
-                    gl_PointSize = 5.0;\
-                    \
-                    if (hackdepth > 0.0)\
-                    {\
-                        gl_Position.z = gl_Position.w;" + "\n" + // sets *final* depth to 1 (clears depth basically)    
-                   "}\
+                    gl_PointSize = 3.0;\
                 }\
                 ");
                 gl.shaderSource(frag, "#define FOG_DIST ("+MAX_DIST+".0)\n" +
                 "\
                 precision mediump float;\
-                uniform vec3 color;\
                 \
                 varying vec3 v_pos;\
                 varying vec3 v_norm;\
                 \
                 void main()\
                 {\
+                    vec3 msushiCol = vec3(0.6980392157, 0, 1);\
                     vec3 s = normalize(-v_pos);\
                     float diffuse = max(dot(s, normalize(v_norm)), 0.0);\
                     float fog = clamp((FOG_DIST - abs(v_pos.z)) / (FOG_DIST - 1.0) * 5.0, 0.0, 1.0);\
-                    gl_FragColor = vec4(color * diffuse * fog, 1);\
+                    gl_FragColor = vec4(msushiCol * diffuse * fog, 1);\
                 }\
                 ");
                 gl.compileShader(vert);
@@ -313,8 +166,6 @@ m
 
                 uniloc_projection = gl.getUniformLocation(shaderProgram, "projection");
                 uniloc_model = gl.getUniformLocation(shaderProgram, "model");
-                uniloc_color = gl.getUniformLocation(shaderProgram, "color");
-                uniloc_hackdepth = gl.getUniformLocation(shaderProgram, "hackdepth");
             }
 
             function dobuffers()
@@ -356,30 +207,14 @@ m
 
             function getBufferData()
             {
-                var STRIDE = 6;
-
-                var quad = 
-                [
-                    -.5, .5, 0, 0, 0, 1,
-                    -.5, -.5, 0, 0, 0, 1,
-                    .5, -.5, 0, 0, 0, 1,
-                    
-                    -.5, .5, 0, 0, 0, 1,
-                    .5, -.5, 0, 0, 0, 1,
-                    .5, .5, 0, 0, 0, 1,
-                ];
-                mdl_quadOffset = 0;
-                mdl_quadCount = quad.length / STRIDE;
-
                 var data = getTextData();
-                mdl_textOffset = mdl_quadCount;
-                mdl_textCount = data.length / STRIDE;
+                textGeometryCount = data.length / 6;
 
-                var stars = new Array(STAR_COUNT * STRIDE);
+                var stars = new Array(STAR_COUNT * 6);
 
                 for (var i = 0; i < STAR_COUNT; i++)
                 {
-                    var starVecOff = i * STRIDE;
+                    var starVecOff = i * 6;
                     stars[starVecOff + 0] = (Math.random() - 0.5) * 2 * MAX_DIST;
                     stars[starVecOff + 1] = (Math.random() - 0.5) * 2 * MAX_DIST;
                     stars[starVecOff + 2] = -Math.random() * MAX_DIST * 2;
@@ -388,31 +223,7 @@ m
                     stars[starVecOff + 5] = 1;
                 }
 
-                mdl_starOffset = mdl_quadCount + mdl_textCount;
-                mdl_starCount = STAR_COUNT;
-
-                var portalDetail = 50;
-                var portal = new Array(portalDetail * 6);
-
-                for (var i = 0; i < portalDetail; i++)
-                {
-                    var angle = (i / portalDetail) * Math.PI * 2.0;
-                    var xPos = Math.sin(angle) * .5;
-                    var zPos = Math.cos(angle) * .25;
-
-                    var portalVecOff = i * STRIDE;
-                    portal[portalVecOff + 0] = xPos;
-                    portal[portalVecOff + 1] = 0;
-                    portal[portalVecOff + 2] = zPos;
-                    portal[portalVecOff + 3] = 0;
-                    portal[portalVecOff + 4] = 1;
-                    portal[portalVecOff + 5] = 0;
-                }
-
-                mdl_portalOffset = mdl_quadCount + mdl_textCount + mdl_starCount;
-                mdl_portalCount = portal.length / STRIDE;
-
-                return new Float32Array(quad.concat(data).concat(stars).concat(portal));
+                return new Float32Array(data.concat(stars));
             }
 
             function getTextData()
@@ -1301,14 +1112,5 @@ m
 
             main();
         </script>
-
-        <div id="partner">
-            <a href="https://ismsushipartnered.com/">
-                <h1>
-                    Is Msushi Partnered?
-                </h1>
-            </a>
-        </div>
-
     </body>
 </html>
